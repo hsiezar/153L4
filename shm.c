@@ -37,7 +37,7 @@ int shm_open(int id, char **pointer) {
     acquire(&(shm_table.lock));
     for (i = 0; i < tableSize; i++) {
         if (shm_table.shm_pages[i].id == id) { //check if segment id is found
-            if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U) == -1) { //ADD MAPPING FROM VIRTUAL TO PHYSICAL
+            if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U)) { //ADD MAPPING FROM VIRTUAL TO PHYSICAL
 	        release(&(shm_table.lock));
 	        return -1;
 	    }
@@ -59,7 +59,7 @@ int shm_open(int id, char **pointer) {
             }
             memset(shm_table.shm_pages[i].frame, 0, PGSIZE);
             shm_table.shm_pages[i].refcnt = 1;
-	    if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U) == -1) {
+	    if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U)) {
 	        release(&(shm_table.lock));
 	        return -1;
 	    }
