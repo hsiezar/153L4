@@ -7,7 +7,7 @@
 #include "proc.h"
 #include "spinlock.h"
 
-const uint SHM_TABLE_SIZE = 64;
+const uint tableSize = 64;
 
 struct {
   struct spinlock lock;
@@ -33,16 +33,16 @@ void shminit() {
 int shm_open(int id, char **pointer) {
 
 //you write this
-int i;
+    int i;
     acquire(&(shm_table.lock));
-    for (i = 0; i< SHM_TABLE_SIZE; i++) {
-        if (shm_table.shm_pages[i].id == id) {
-            if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U) == -1) {
+    for (i = 0; i < tableSize; i++) {
+        if (shm_table.shm_pages[i].id == id) { //check if segment id is found
+            if (mappages(myproc()->pgdir, (char *)PGROUNDUP(myproc()->sz), PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U) == -1) { //ADD MAPPING FROM VIRTUAL TO PHYSICAL
 	        release(&(shm_table.lock));
 	        return -1;
 	    }
 
-            shm_table.shm_pages[i].refcnt += 1;
+            shm_table.shm_pages[i].refcnt += 1; //increase refcnt
             *pointer = (char *)PGROUNDUP(myproc()->sz);
             myproc()->sz += PGSIZE;
             release(&(shm_table.lock)); 
@@ -50,7 +50,7 @@ int i;
         }
     }
 
-    for (i = 0; i< SHM_TABLE_SIZE; i++) {
+    for (i = 0; i < tableSize; i++) {
         if (shm_table.shm_pages[i].id == 0) {
             shm_table.shm_pages[i].id = id;
             if ((shm_table.shm_pages[i].frame = kalloc()) == 0) {
@@ -63,7 +63,7 @@ int i;
 	        release(&(shm_table.lock));
 	        return -1;
 	    }
-
+	    //return pointer to virtual address
 	    *pointer = (char *)PGROUNDUP(myproc()->sz);
             myproc()->sz += PGSIZE;
             release(&(shm_table.lock));
@@ -74,7 +74,6 @@ int i;
     
 
     release(&(shm_table.lock));
-
     return -1; //added to remove compiler warning -- you should decide what to return
 
 }
@@ -82,13 +81,15 @@ int i;
 
 int shm_close(int id) {
 //you write this too!
-int i;
-    acquire(&(shm_table.lock));
-    for (i = 0; i < SHM_TABLE_SIZE; i++) {
+    int i;
+
+    acquire(&(shm_table.lock)); //Lock to not lose updates
+    for (i = 0; i < tableSize; i++) {
+	//CHECK IF SEGMENT ID IS FOUND
         if (shm_table.shm_pages[i].id == id) {
-            shm_table.shm_pages[i].refcnt -= 1;
+            shm_table.shm_pages[i].refcnt -= 1; //DECREMENT REF
             if (shm_table.shm_pages[i].refcnt <= 0) {
-                shm_table.shm_pages[i].id = 0;
+                shm_table.shm_pages[i].id = 0; //clear all values to 0
                 shm_table.shm_pages[i].frame = 0;
                 shm_table.shm_pages[i].refcnt = 0;
             }
